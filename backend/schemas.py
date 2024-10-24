@@ -32,17 +32,22 @@ class ChatObject(BaseModel):
 class SearchQueryStream(ChatObject):
     event_type: StreamEvent = StreamEvent.SEARCH_QUERY
     query: str
+
 class SearchResultStream(ChatObject):
     event_type: StreamEvent = StreamEvent.SEARCH_RESULTS
     results: List[SearchResult] = Field(default_factory=list)
+
 class TextChunkStream(ChatObject):
     event_type: StreamEvent = StreamEvent.TEXT_CHUNK
     text: str
+
 class RelatedQueriesStream(ChatObject):
     event_type: StreamEvent = StreamEvent.RELATED_QUERIES
     related_queries: List[str] = Field(default_factory=list)
+
 class StreamEndStream(ChatObject):
     event_type: StreamEvent = StreamEvent.STREAM_END
+
 class ChatResponseEvent(BaseModel):
     event: StreamEvent
     data: Union[

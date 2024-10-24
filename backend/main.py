@@ -6,9 +6,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 import time
-
 import httpx
-
 from schemas import (
     ChatRequest,
     ChatResponseEvent,
@@ -22,6 +20,13 @@ from schemas import (
 )
 
 app = FastAPI()
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 fake_query = "Sam Pan"
@@ -53,44 +58,43 @@ async def search(request: ChatRequest) -> StreamingResponse:
 
 async def stream_qa_objects(request: ChatRequest) -> AsyncIterator[ChatResponseEvent]:
     yield ChatResponseEvent(
-        event=StreamEvent.SEARCH_QUERY, 
-        data=SearchQueryStream(query=fake_query)
+        event=StreamEvent.SEARCH_QUERY,
+        data=SearchQueryStream(query=fake_query),
     )
-
     await asyncio.sleep(1)
-
     yield ChatResponseEvent(
-        event=StreamEvent.SEARCH_RESULTS, 
-        data=SearchResultStream(results=fake_search_results)
+        event=StreamEvent.SEARCH_RESULTS,
+        data=SearchResultStream(
+            results=fake_search_results,
+        ),
     )
-    
     for word in fake_response.split():
         yield ChatResponseEvent(
-            event=StreamEvent.TEXT_CHUNK, 
-            data=TextChunkStream(text=word)
+            event=StreamEvent.TEXT_CHUNK,
+            data=TextChunkStream(text=word),
         )
         await asyncio.sleep(0.1)
-
-    yield ChatResponseEvent(
-        event=StreamEvent.RELATED_QUERIES, 
-        data=RelatedQueriesStream(related_queries=fake_related_queries)
-    )
     
     yield ChatResponseEvent(
-        event=StreamEvent.STREAM_END, 
-        data=StreamEndStream()
+        event=StreamEvent.RELATED_QUERIES,
+        data=RelatedQueriesStream(related_queries=fake_related_queries),
+    )
+
+    yield ChatResponseEvent(
+        event=StreamEvent.STREAM_END,
+        data=StreamEndStream(),
     )
 
 async def main():
-    url = "http://localhost:8000/search"
-
+    url = "http://127.0.0.1:8000/search"
+    print("Sending request")
     async with httpx.AsyncClient() as client:
         async with client.stream(
             "POST", 
             url, 
-            json=ChatRequest(query="Sam Pan", history=[]).model_dump()
+            json=ChatRequest(query="Sam Pan", history=[]).model_dump(),
         ) as r:
-            async for chunk in r.iter_bytes():
+            async for chunk in r.aiter_text():
                 print(chunk)
 
 if __name__ == "__main__":
